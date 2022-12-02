@@ -1,6 +1,6 @@
 <template>
-    <div class="mason-scroll">
-        <div :id="ID" :ref="ID" class="scroll-content" :style="'overflow-x:' + (scrollX?'scroll':'hidden') + ';overflow-y:' + (scrollY?'scroll':'hidden') + ';'" @scroll="scrollTop">
+    <div class="mason-scroll" :id="ID+'scroll'" :ref="ID+'scroll'">
+        <div :id="ID" :ref="ID" class="scroll-content" :style="'overflow-x:' + (scrollX?'scroll':'hidden') + ';overflow-y:' + (scrollY?'scroll':'hidden') + ';'" @scroll="scrollEvent">
             <slot></slot>
         </div>
         <div v-if="scrollX && showScrollX && scrolls.canScrollX" class="x-track" :style="xTrackStyle" @mousedown.stop="xScrollTo" @mouseenter.stop="xChangeTrack(true)" @mouseleave.stop="xChangeTrack(false)">
@@ -15,6 +15,11 @@
 <script>
 export default {
     props: {
+        /* 计算延迟 针对部分容器高度变化增加过渡动画 */
+        delay: {
+            type: Number,
+            default: 500
+        },
         /* ID */
         ID: {
             type: String,
@@ -69,7 +74,7 @@ export default {
         /* x轴 - 滚动背景 */
         xTrackStyle(){
             if(this.scrollX && this.scrolls.xShowTrack){
-                return 'border-top: 1px solid rgba(255,255,255,0.08)'
+                return 'border-top: 1px solid rgba(255,255,255,0.08);background-color:rgba(255,255,255,0.03)'
             }else{
                 return 'border-top: 1px solid transparent'
             }
@@ -77,7 +82,7 @@ export default {
         /* 滚动条背景 */
         yTrackStyle(){
             if(this.scrollY && this.scrolls.yShowTrack){
-                return 'border-left: 1px solid rgba(255,255,255,0.08)'
+                return 'border-left: 1px solid rgba(255,255,255,0.08);background-color:rgba(255,255,255,0.03)'
             }else{
                 return 'border-left: 1px solid transparent'
             }
@@ -88,19 +93,44 @@ export default {
             this.mathScrolls()
         },300)
         this.$nextTick(() =>{
+            this.handleScroll();
             this.handleContainer();
         })
     },
     methods:{
+        /* 监听外部容器属性变化 - 动态高度变化 自动重置滚动信息 */
+        handleScroll(){
+            var _this = this
+            var code = this.ID + 'scroll'
+            var $tar = document.getElementById(code);
+            var option = {
+                // childList: true, // 子节点的变动（新增、删除或者更改）
+                attributes: true, // 属性的变动
+                // characterData: true, // 节点内容或节点文本的变动
+                // subtree: true, // 是否将观察器应用于该节点的所有后代节点
+                attributeFilter: ['class', 'style'], // 观察特定属性
+                // attributeOldValue: true, // 观察 attributes 变动时，是否需要记录变动前的属性值
+                // characterDataOldValue: true // 观察 characterData 变动，是否需要记录变动前的值
+            }
+            var mutationObserver = new MutationObserver(function (mutations) {
+                if(mutations){
+                    setTimeout(() =>{
+                        _this.mathScrolls()
+                    },_this.delay)
+                }
+            })
+            mutationObserver.disconnect();
+            mutationObserver.observe($tar, option);
+        },
         /* 监听文本区域内容变化 - 列表刷新或加载 自动重置滚动信息 */
         handleContainer(){
             var _this = this
             var $tar = document.getElementById(this.ID);
             var option = {
                 childList: true, // 子节点的变动（新增、删除或者更改）
-                // attributes: true, // 属性的变动
+                attributes: true, // 属性的变动
                 characterData: true, // 节点内容或节点文本的变动
-                subtree: true, // 是否将观察器应用于该节点的所有后代节点
+                // subtree: true, // 是否将观察器应用于该节点的所有后代节点
                 // attributeFilter: ['class', 'style'], // 观察特定属性
                 // attributeOldValue: true, // 观察 attributes 变动时，是否需要记录变动前的属性值
                 // characterDataOldValue: true // 观察 characterData 变动，是否需要记录变动前的值
@@ -110,6 +140,7 @@ export default {
                     _this.mathScrolls()
                 }
             })
+            mutationObserver.disconnect();
             mutationObserver.observe($tar, option);
         },
         /* 计算滚动区域 */
@@ -133,9 +164,10 @@ export default {
             }else{
                 this.scrolls.canScrollY = true
             }
+            this.scrollEvent();
         },
         /* 区域滚动监听 */
-        scrollTop(){
+        scrollEvent(){
             const el = document.getElementById(this.ID)
             // 横轴
             var scrollLeft = Math.ceil(el.scrollLeft / this.scrolls.scrollWidth * this.scrolls.clientWidth)
@@ -276,7 +308,7 @@ export default {
     }
     .mason-scroll .x-track .x-thumb{
         height: 70%;
-        background-color: rgba(255,255,255,0.25);
+        background-color: rgba(255,255,255,0.3);
         border-radius: 999999px;
         position: absolute;
         cursor: pointer;
@@ -307,7 +339,7 @@ export default {
     }
     .mason-scroll .y-track .y-thumb{
         width: 70%;
-        background-color: rgba(255,255,255,0.25);
+        background-color: rgba(255,255,255,0.3);
         border-radius: 999999px;
         position: absolute;
         cursor: pointer;
@@ -320,5 +352,4 @@ export default {
         transition: opacity 0.3s;
         -webkit-transition: opacity 0.3s;
     }
-    
 </style>
