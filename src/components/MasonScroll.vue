@@ -1,13 +1,13 @@
 <template>
-    <div class="mason-scroll" id="MasonScroll" ref="MasonScroll">
-        <div class="scroll-content" :style="'overflow-x:' + (scrollX?'scroll':'hidden') + ';overflow-y:' + (scrollY?'scroll':'hidden') + ';'" id="ScrollContent" ref="ScrollContent" @scroll="scrollTop">
+    <div class="mason-scroll">
+        <div :id="ID" :ref="ID" class="scroll-content" :style="'overflow-x:' + (scrollX?'scroll':'hidden') + ';overflow-y:' + (scrollY?'scroll':'hidden') + ';'" @scroll="scrollTop">
             <slot></slot>
         </div>
-        <div v-if="scrollX && showScrollX && scrolls.canScrollX" class="x-track" :style="xTrackStyle">
-            <div class="x-thumb" @mouseenter="xChangeTrack(true)" @mouseleave="xChangeTrack(false)" @mousedown="xStartMoveTrack" @mouseup="xEndMoveTrack" @mousemove="xMovingTrack" :style="'width:' + scrolls.width + 'px;left:' + scrolls.left + 'px;'"></div>
+        <div v-if="scrollX && showScrollX && scrolls.canScrollX" class="x-track" :style="xTrackStyle" @mousedown.stop="xScrollTo" @mouseenter.stop="xChangeTrack(true)" @mouseleave.stop="xChangeTrack(false)">
+            <div class="x-thumb" @mousedown.stop="xStartMoveTrack" @mouseup.stop="xEndMoveTrack" @mousemove.stop="xMovingTrack" :style="'width:' + scrolls.width + 'px;left:' + scrolls.left + 'px;'"></div>
         </div>
-        <div v-if="scrollY && showScrollY && scrolls.canScrollY" class="y-track" :style="yTrackStyle">
-            <div class="y-thumb" @mouseenter="yChangeTrack(true)" @mouseleave="yChangeTrack(false)" @mousedown="yStartMoveTrack" @mouseup="yEndMoveTrack" @mousemove="yMovingTrack" :style="'height:' + scrolls.height + 'px;top:' + scrolls.top + 'px;'"></div>
+        <div v-if="scrollY && showScrollY && scrolls.canScrollY" class="y-track" :style="yTrackStyle" @mousedown.stop="yScrollTo" @mouseenter.stop="yChangeTrack(true)" @mouseleave.stop="yChangeTrack(false)">
+            <div class="y-thumb" @mousedown.stop="yStartMoveTrack" @mouseup.stop="yEndMoveTrack" @mousemove.stop="yMovingTrack" :style="'height:' + scrolls.height + 'px;top:' + scrolls.top + 'px;'"></div>
         </div>
     </div>
 </template>
@@ -15,6 +15,11 @@
 <script>
 export default {
     props: {
+        /* ID */
+        ID: {
+            type: String,
+            default: 'MasonScroll'
+        },
         /* x轴是否滚动 */
         scrollX: {
             type: Boolean,
@@ -64,7 +69,7 @@ export default {
         /* x轴 - 滚动背景 */
         xTrackStyle(){
             if(this.scrollX && this.scrolls.xShowTrack){
-                return 'border-top: 1px solid rgba(0,0,0,0.08)'
+                return 'border-top: 1px solid rgba(255,255,255,0.08)'
             }else{
                 return 'border-top: 1px solid transparent'
             }
@@ -72,7 +77,7 @@ export default {
         /* 滚动条背景 */
         yTrackStyle(){
             if(this.scrollY && this.scrolls.yShowTrack){
-                return 'border-left: 1px solid rgba(0,0,0,0.08)'
+                return 'border-left: 1px solid rgba(255,255,255,0.08)'
             }else{
                 return 'border-left: 1px solid transparent'
             }
@@ -90,7 +95,7 @@ export default {
         /* 监听文本区域内容变化 - 列表刷新或加载 自动重置滚动信息 */
         handleContainer(){
             var _this = this
-            var $tar = document.getElementById('ScrollContent');
+            var $tar = document.getElementById(this.ID);
             var option = {
                 childList: true, // 子节点的变动（新增、删除或者更改）
                 // attributes: true, // 属性的变动
@@ -109,7 +114,7 @@ export default {
         },
         /* 计算滚动区域 */
         mathScrolls(){
-            const el = document.getElementById('ScrollContent')
+            const el = document.getElementById(this.ID)
             // 横轴
             this.scrolls.scrollWidth = el.scrollWidth
             this.scrolls.clientWidth = el.clientWidth
@@ -131,7 +136,7 @@ export default {
         },
         /* 区域滚动监听 */
         scrollTop(){
-            const el = document.getElementById('ScrollContent')
+            const el = document.getElementById(this.ID)
             // 横轴
             var scrollLeft = Math.ceil(el.scrollLeft / this.scrolls.scrollWidth * this.scrolls.clientWidth)
             if(scrollLeft + this.scrolls.width <= this.scrolls.clientWidth){
@@ -171,9 +176,15 @@ export default {
                 }else if(e.offsetX - this.scrolls.xMovingStart + this.scrolls.left + this.scrolls.width >= this.scrolls.clientWidth){
                     this.scrolls.left = this.scrolls.clientWidth - this.scrolls.width
                 }
-                const el = document.getElementById('ScrollContent')
+                const el = document.getElementById(this.ID)
                 el.scrollLeft = this.scrolls.left/this.scrolls.clientWidth*this.scrolls.scrollWidth
             }
+        },
+        /* x轴 - 快速定位 */
+        xScrollTo(e){
+            this.scrolls.left = e.offsetX
+            const el = document.getElementById(this.ID)
+            el.scrollLeft = this.scrolls.left/this.scrolls.clientWidth*this.scrolls.scrollWidth
         },
         /* x轴拖动 - 结束 */
         xEndMoveTrack(e){
@@ -202,7 +213,7 @@ export default {
                 }else if(e.offsetY - this.scrolls.yMovingStart + this.scrolls.top + this.scrolls.height >= this.scrolls.clientHeight){
                     this.scrolls.top = this.scrolls.clientHeight - this.scrolls.height
                 }
-                const el = document.getElementById('ScrollContent')
+                const el = document.getElementById(this.ID)
                 el.scrollTop = Math.ceil(this.scrolls.top/this.scrolls.clientHeight*this.scrolls.scrollHeight)
             }
         },
@@ -210,6 +221,12 @@ export default {
         yEndMoveTrack(e){
             this.scrolls.yIsMoving = false
             this.scrolls.yMovingStart = 0
+        },
+        /* y轴 - 快速定位 */
+        yScrollTo(e){
+            this.scrolls.top = e.offsetY
+            const el = document.getElementById(this.ID)
+            el.scrollTop = Math.ceil(this.scrolls.top/this.scrolls.clientHeight*this.scrolls.scrollHeight)
         },
         /* 滚动到底部 */
         scrollEnd(way){
@@ -227,7 +244,7 @@ export default {
     .mason-scroll{
         width: 100%;
         height: 100%;
-        background-color: #f0f0f0;
+        background-color: transparent;
         position: relative;
     }
     .mason-scroll .scroll-content{
@@ -259,7 +276,7 @@ export default {
     }
     .mason-scroll .x-track .x-thumb{
         height: 70%;
-        background-color: rgba(0,0,0,0.3);
+        background-color: rgba(255,255,255,0.25);
         border-radius: 999999px;
         position: absolute;
         cursor: pointer;
@@ -290,7 +307,7 @@ export default {
     }
     .mason-scroll .y-track .y-thumb{
         width: 70%;
-        background-color: rgba(0,0,0,0.3);
+        background-color: rgba(255,255,255,0.25);
         border-radius: 999999px;
         position: absolute;
         cursor: pointer;
